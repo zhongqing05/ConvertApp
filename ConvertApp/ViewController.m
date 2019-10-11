@@ -32,6 +32,7 @@
 @property (nonatomic, copy) NSArray *ignoreFolder;
 @property (nonatomic, strong) NSRegularExpression *regex;
 @property (nonatomic, strong) NSRegularExpression *regex_Aite;
+@property (weak) IBOutlet NSButton *ClearBtn;
 
 @end
 
@@ -213,8 +214,9 @@
         return;
     }
     [self.resultTable reloadData];
-    self.exportBtn.enabled = NO;
     self.exportDir.enabled = NO;
+    self.ClearBtn.enabled = YES;
+    self.exportBtn.enabled = YES;
 }
 
 - (NSRegularExpression *)ignorExp:(NSArray *)ignoreAry {
@@ -491,6 +493,15 @@
         }
     }
     [self startReadTofile];
+}
+- (IBAction)clickClearBtn:(id)sender {
+    self.localizedkeyField.enabled = YES;
+    self.exportDir.enabled = YES;
+    
+    [self.keyAry removeAllObjects];
+    [self.keyValue removeAllObjects];
+    [self.valueKey removeAllObjects];
+    [self.resultTable reloadData];
 }
 
 - (void)textDidEndEditing:(NSNotification *)notification
