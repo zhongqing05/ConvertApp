@@ -19,19 +19,17 @@
 @property (weak) IBOutlet NSButton *exportDir;
 @property (weak) IBOutlet NSButton *exportBtn;
 @property (weak) IBOutlet NSTextField *exportField;
-
 @property (weak) IBOutlet NSTableHeaderView *resultHeader;
 @property (weak) IBOutlet NSTextField *ignoreFolderField;
-
 @property (weak) IBOutlet NSTextField *localizedkeyField;
 
 @property (nonatomic, copy) NSString *projectPath;
-@property (nonatomic, strong) NSMutableSet *suffixSet;       //要遍历的后缀文件名
-@property (nonatomic, strong) NSMutableDictionary *keyValue; //中文对应的Key
-@property (nonatomic, strong) NSMutableArray *keyAry;        //
-@property (nonatomic, strong) NSMutableDictionary *valueKey; //value -  key(英文value 和key 都保持唯一)
+@property (nonatomic, strong) NSMutableSet *suffixSet;          //要遍历的后缀文件名
+@property (nonatomic, strong) NSMutableDictionary *keyValue;    //key - value
+@property (nonatomic, strong) NSMutableArray *keyAry;           //
+@property (nonatomic, strong) NSMutableDictionary *valueKey;    //value -  key(英文value 和key 都保持唯一)
+@property (nonatomic, strong) NSMutableDictionary *oldValueKey; //value -key
 @property (nonatomic, copy) NSArray *ignoreFolder;
-
 @property (nonatomic, strong) NSRegularExpression *regex;
 @property (nonatomic, strong) NSRegularExpression *regex_Aite;
 
@@ -46,9 +44,10 @@
 
     _keyValue = [NSMutableDictionary dictionary];
     _valueKey = [NSMutableDictionary dictionary];
+    _oldValueKey = [NSMutableDictionary dictionary];
+
     _keyAry = [NSMutableArray array];
-    
-    
+
     if (_suffix_m.state == NSControlStateValueOn) {
         [_suffixSet addObject:@".m"];
     }
@@ -64,6 +63,7 @@
     // Do any additional setup after loading the view.
 }
 
+#pragma - mark NSTableViewDataSource &&NSTableViewDelegate
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
     return _keyAry.count;
 }
@@ -174,7 +174,6 @@
             filePath = [_projectPath stringByAppendingString:filePath];
             NSString *content = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
 
-            
             NSArray *matches = [self.regex_Aite matchesInString:content options:NSMatchingReportCompletion range:NSMakeRange(0, content.length)];
             if ([suffix isEqualToString:@".swift"]) {
                 matches = [self.regex matchesInString:content options:NSMatchingReportCompletion range:NSMakeRange(0, content.length)];
@@ -198,7 +197,7 @@
                     }
                     NSUInteger nIndex = [chinaAry indexOfObject:china];
 
-                    NSString *key = [NSString stringWithFormat:@"%@%lu",defaultKey,(unsigned long)nIndex];
+                    NSString *key = [NSString stringWithFormat:@"%@%lu", defaultKey, (unsigned long)nIndex];
 
                     [_keyValue setValue:china forKey:key];
                     [_keyAry addObject:key];
@@ -214,8 +213,8 @@
         return;
     }
     [self.resultTable reloadData];
-    self.exportBtn.enabled = YES;
-    self.exportDir.enabled = YES;
+    self.exportBtn.enabled = NO;
+    self.exportDir.enabled = NO;
 }
 
 - (NSRegularExpression *)ignorExp:(NSArray *)ignoreAry {
@@ -232,68 +231,119 @@
     return ignorRex;
 }
 
-- (NSRegularExpression *)regex
-{
+#pragma - mark lazyload
+- (NSRegularExpression *)regex {
     if (!_regex) {
-       NSString *pattern = @"\"[^\"]*[\u4E00-\u9FA5]+[^\"\n]*?\"";
-       NSError *error = nil;
-       _regex = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
-       if (error) {
-           NSLog(@"Could't create regex with given string and options");
-       }
+        NSString *pattern = @"\"[^\"]*[\u4E00-\u9FA5]+[^\"\n]*?\"";
+        NSError *error = nil;
+        _regex = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
+        if (error) {
+            NSLog(@"Could't create regex with given string and options");
+        }
     }
     return _regex;
 }
 
-- (NSRegularExpression *)regex_Aite
-{
+- (NSRegularExpression *)regex_Aite {
     if (!_regex_Aite) {
-       NSString *pattern = @"@\"[^\"]*[\u4E00-\u9FA5]+[^\"\n]*?\"";
-       NSError *error = nil;
-       _regex_Aite = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
-       if (error) {
-           NSLog(@"Could't create regex with given string and options");
-       }
+        NSString *pattern = @"@\"[^\"]*[\u4E00-\u9FA5]+[^\"\n]*?\"";
+        NSError *error = nil;
+        _regex_Aite = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
+        if (error) {
+            NSLog(@"Could't create regex with given string and options");
+        }
     }
     return _regex_Aite;
 }
 
--(NSString *)localizedKey{
+- (NSString *)localizedKey {
     NSString *defaultKey = @"LocalizedKey";
-       if (self.localizedkeyField.stringValue.length > 0) {
-           defaultKey = self.localizedkeyField.stringValue;
-       }
+    if (self.localizedkeyField.stringValue.length > 0) {
+        defaultKey = self.localizedkeyField.stringValue;
+    }
     return defaultKey;
 }
 
+#pragma - mark privateMethods
 - (void)startReadTofile {
     NSString *tmpFile = [_exportField stringValue];
-    if (!tmpFile) {
-        [self showAlert:@"请输入导出路径"];
-        return;
-    }
-    NSError *err;
+
+    NSString *willRead = @"";
     if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
-        [[NSFileManager defaultManager] removeItemAtPath:tmpFile error:&err];
+        willRead = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
+
+        NSDateFormatter *fomart = [[NSDateFormatter alloc] init];
+        [fomart setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+        NSString *time = [fomart stringFromDate:[NSDate date]];
+
+        NSString *flagString = [NSString stringWithFormat:@"// Begin Insert At %@ \n\n", time];
+        willRead = [willRead stringByAppendingString:flagString];
     }
 
     NSString *defaultKey = [self localizedKey];
-    NSString *willRead = @"";
     for (int n = 0; n < _keyValue.count; n++) {
         NSString *key = [defaultKey stringByAppendingFormat:@"%d", n];
         NSString *value = [_keyValue objectForKey:key];
+
         if ([value hasPrefix:@"@"]) {
             value = [value substringFromIndex:1];
         }
-        willRead = [willRead stringByAppendingFormat:@"\"%@\"   =  %@\n", key, value];
+        if (_oldValueKey.count > 0) {
+            if ([_oldValueKey objectForKey:value]) {
+                continue;
+            }
+        }
+        willRead = [willRead stringByAppendingFormat:@"\"%@\"   =  %@;\n", key, value];
     }
-
     BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:tmpFile contents:[willRead dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
 
     if (isSuccess) {
         [self showAlert:@"Success"];
     } else {
         [self showAlert:@"导出文件失败"];
+    }
+}
+
+- (void)readExistLocalizedString {
+    [_oldValueKey removeAllObjects];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+
+    NSString *tmpFile = [_exportField stringValue];
+    if (!tmpFile) {
+        [self showAlert:@"请输入导出路径"];
+        return;
+    }
+
+    if ([fileManager fileExistsAtPath:tmpFile]) {
+        NSString *content = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
+
+        NSString *pattern = @"\"\\w+\"\\s+=\\s+.+\n";
+        NSError *error = nil;
+        NSRegularExpression *exp = [[NSRegularExpression alloc] initWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
+        if (error) {
+            NSLog(@"Could't create regex with given string and options");
+        }
+        NSArray *matches = [exp matchesInString:content options:NSMatchingReportCompletion range:NSMakeRange(0, content.length)];
+        for (NSTextCheckingResult *result in matches) {
+            NSString *lineStr = [content substringWithRange:result.range];
+            if ([lineStr containsString:@"//"]) {
+                continue;
+            }
+            NSRange range = [lineStr rangeOfString:@"="];
+            if (range.location != NSNotFound) {
+                NSString *key = [[lineStr substringToIndex:range.location] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                key = [key stringByReplacingOccurrencesOfString:@"\"" withString:@""];
+
+                NSString *value = [[lineStr substringFromIndex:range.location + range.length] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                if (![value hasSuffix:@";"]) {
+                    continue;
+                }
+                value = [value substringWithRange:NSMakeRange(0, value.length - 1)];
+
+                [_oldValueKey setValue:key forKey:value];
+            }
+        }
     }
 }
 
@@ -310,6 +360,7 @@
                   }];
 }
 
+#pragma - mark ClickMetods
 - (IBAction)clicksuffix_m:(NSButton *)sender {
     NSLog(@"clicksuffix_m%@", sender);
     if (sender.state == NSControlStateValueOn) {
@@ -343,19 +394,37 @@
     }
 }
 
+//导出目录
 - (IBAction)clickExportButton:(id)sender {
-    
+    NSOpenPanel *openPanel = [NSOpenPanel openPanel];
+    [openPanel setCanChooseDirectories:YES];
+
+    NSWindow *window = [[NSApplication sharedApplication] keyWindow];
+
+    __weak __typeof(self) weakSelf = self;
+    [openPanel beginSheetModalForWindow:window
+                      completionHandler:^(NSModalResponse returnCode) {
+                        if (returnCode == 1) {
+                            NSURL *fileUrl = [[openPanel URLs] objectAtIndex:0];
+                            NSString *filePath = [[fileUrl.absoluteString componentsSeparatedByString:@"file://"] lastObject];
+                            NSString *decodedString = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (__bridge CFStringRef)filePath, CFSTR(""), CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
+                            NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
+                            [weakSelf.exportField setStringValue:exportPath];
+                        }
+                      }];
 }
 
 - (IBAction)startExport:(id)sender {
     NSFileManager *fileManager = [NSFileManager defaultManager];
 
-    if (_projectPath.length <= 0) {
-        [self showAlert:@"请选择项目工程地址"];
+    NSString *tmpFile = [_exportField stringValue];
+    if (!tmpFile) {
+        [self showAlert:@"请输入导出路径"];
         return;
     }
-    if (![fileManager fileExistsAtPath:_projectPath]) {
-        [self showAlert:@"显示工程目录"];
+
+    if (_projectPath.length <= 0) {
+        [self showAlert:@"请选择项目工程地址"];
         return;
     }
 
@@ -363,6 +432,10 @@
         [self showAlert:@"请选择要查找文件的后缀名"];
         return;
     }
+
+    //通过路径找出已经本地话过的文件内容
+    [self readExistLocalizedString];
+
     NSDirectoryEnumerator *enumerator = [fileManager enumeratorAtPath:_projectPath];
     NSString *filePath = nil;
     while ((filePath = [enumerator nextObject]) != nil) {
@@ -390,7 +463,17 @@
                 NSRange range = [relplacedString rangeOfString:china];
 
                 NSString *value = china;
+                //找出对应的key
                 NSString *key = [_valueKey objectForKey:value];
+                //如果就的配置文件有值，改用旧的
+                if (_oldValueKey.count > 0) {
+                    if ([value hasPrefix:@"@"]) {
+                        value = [value substringFromIndex:1];
+                    }
+                    if ([_oldValueKey objectForKey:value]) {
+                        key = [_oldValueKey objectForKey:value];
+                    }
+                }
                 if (key) {
                     NSString *loclizedStr = [NSString stringWithFormat:@"NSLocalizedString(@\"%@\", @\"\")", key];
                     if ([suffix containsString:@".swift"]) {
@@ -419,7 +502,5 @@
 {
     NSLog(@"textDidChange");
 }
-
-
 
 @end
