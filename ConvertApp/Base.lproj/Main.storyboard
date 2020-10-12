@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="15400" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="17156" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15400"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="17156"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -807,7 +807,6 @@
                                             <tableColumns>
                                                 <tableColumn identifier="resultkey" width="176" minWidth="40" maxWidth="1000" id="rY1-Dj-9iq">
                                                     <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" title="KeyCloun">
-                                                        <font key="font" metaFont="smallSystem"/>
                                                         <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                                     </tableHeaderCell>
@@ -820,7 +819,6 @@
                                                 </tableColumn>
                                                 <tableColumn identifier="resultvalue" width="294" minWidth="40" maxWidth="1000" id="CDj-JF-ZPg">
                                                     <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" title="ValueCloun">
-                                                        <font key="font" metaFont="smallSystem"/>
                                                         <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
                                                     </tableHeaderCell>
@@ -911,7 +909,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="qDC-0J-PZi">
-                                <rect key="frame" x="50" y="258" width="96" height="21"/>
+                                <rect key="frame" x="50" y="258" width="97" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" placeholderString="LocalizedKey" drawsBackground="YES" id="JAp-sE-GhL">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -930,7 +928,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="tLl-sP-EE7">
-                                <rect key="frame" x="152" y="261" width="299" height="16"/>
+                                <rect key="frame" x="153" y="261" width="298" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="clipping" title="replace to NSLocalizedString(LocalizedKey, @&quot;&quot;)" id="EgF-NM-e0p">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="tertiaryLabelColor" catalog="System" colorSpace="catalog"/>
@@ -1007,7 +1005,6 @@
                         <outlet property="ClearBtn" destination="PZ4-br-r3G" id="xzp-hM-WM8"/>
                         <outlet property="TextFiled" destination="wqE-8A-hOI" id="mQT-EY-bSm"/>
                         <outlet property="exportBtn" destination="iIK-hy-dGS" id="8L6-a0-3Nu"/>
-                        <outlet property="exportDir" destination="sHG-J7-ffw" id="ZSv-Z1-YJz"/>
                         <outlet property="exportField" destination="2A4-Ts-5RU" id="cIS-Op-usp"/>
                         <outlet property="ignoreFolderField" destination="qBh-RO-ix6" id="Fdg-Qw-OO2"/>
                         <outlet property="localizedkeyField" destination="qDC-0J-PZi" id="AxA-qv-jCQ"/>
