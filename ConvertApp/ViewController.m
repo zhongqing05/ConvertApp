@@ -168,6 +168,7 @@
         if ([_suffixSet containsObject:suffix]) {
             NSArray *ary = [ignoreExp matchesInString:filePath options:NSMatchingReportCompletion range:NSMakeRange(0, filePath.length)];
             if (ary.count > 0) {
+                NSLog(@"ignor filePath:%@",filePath);
                 continue;
             }
 
@@ -225,7 +226,7 @@
     NSError *error = nil;
     NSString *ss = [ignoreAry componentsJoinedByString:@"|"];
 
-    NSRegularExpression *ignorRex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"^(%@)/", ss] options:NSRegularExpressionCaseInsensitive error:&error];
+    NSRegularExpression *ignorRex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@/", ss] options:NSRegularExpressionCaseInsensitive error:&error];
     if (error) {
         [self showAlert:error.localizedDescription];
     }
