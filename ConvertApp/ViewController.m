@@ -24,6 +24,7 @@
 @property (weak) IBOutlet NSTableHeaderView *resultHeader;
 @property (weak) IBOutlet NSTextField *ignoreFolderField;
 @property (weak) IBOutlet NSTextField *localizedkeyField;
+@property (weak) IBOutlet NSButton *ClearBtn;
 
 @property (nonatomic, copy) NSString *projectPath;
 @property (nonatomic, strong) NSMutableSet *suffixSet;          //要遍历的后缀文件名
@@ -34,9 +35,8 @@
 @property (nonatomic, copy) NSArray *ignoreFolder;
 @property (nonatomic, strong) NSRegularExpression *regex;
 @property (nonatomic, strong) NSRegularExpression *regex_Aite;
-@property (weak) IBOutlet NSButton *ClearBtn;
 
-@property (nonatomic, copy) NSArray *keyArrays;
+///新加入的中文
 @property (nonatomic, strong) NSMutableDictionary  *newtextDict;
 
 @end
@@ -91,19 +91,7 @@
     return @"";
 }
 
-//-(NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
-//{
-//    //表格列的标识
-//    NSString *identifier = tableColumn.identifier;
-//    //根据表格列的标识,创建单元视图
-//    NSView *view = [tableView makeViewWithIdentifier:identifier owner:self];
-//    NSArray *subviews = [view subviews];
-//
-//    if (subviews.count > 0) {
-//
-//    }
-//    return view;
-//}
+
 - (void)setRepresentedObject:(id)representedObject {
     [super setRepresentedObject:representedObject];
 
@@ -117,24 +105,21 @@
     NSWindow *window = [[NSApplication sharedApplication] keyWindow];
    
     __weak __typeof(self) weakSelf = self;
-    [openPanel beginSheetModalForWindow:window
-                      completionHandler:^(NSModalResponse returnCode) {
-                        if (returnCode == 1) {
-                            NSURL *fileUrl = [[openPanel URLs] objectAtIndex:0];
-                            NSString *filePath = [[fileUrl.absoluteString componentsSeparatedByString:@"file://"] lastObject];
-                            //NSString *decodedString = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (__bridge CFStringRef)filePath, CFSTR(""), CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
-                            NSString *decodedString = (NSString *)CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault, (CFStringRef)filePath, CFSTR("")));
-                            
-                            weakSelf.projectPath = decodedString;
-                            [weakSelf.textField setStringValue:decodedString];
-                            NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
-                            [weakSelf.exportField setStringValue:exportPath];
-                        }
-                      }];
+    [openPanel beginSheetModalForWindow:window completionHandler:^(NSModalResponse returnCode) {
+        if (returnCode == 1) {
+            NSURL *fileUrl = [[openPanel URLs] objectAtIndex:0];
+            NSString *filePath = [[fileUrl.absoluteString componentsSeparatedByString:@"file://"] lastObject];
+            NSString *decodedString = (NSString *)CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault, (CFStringRef)filePath, CFSTR("")));
+            weakSelf.projectPath = decodedString;
+            [weakSelf.textField setStringValue:decodedString];
+            NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
+            [weakSelf.exportField setStringValue:exportPath];
+        }}
+    ];
 }
 
 - (IBAction)startSearch:(id)sender {
-    NSLog(@"seletRootFolder");
+
     _localizedkeyField.enabled = NO;
     _ignoreFolder = nil;
     NSString *ignoreString = _ignoreFolderField.stringValue;
@@ -162,8 +147,7 @@
     //.h .swift
     NSDirectoryEnumerator *enumerator = [fileManager enumeratorAtPath:_projectPath];
     NSString *filePath = nil;
-//    NSMutableSet *set = [[NSMutableSet alloc] init];
-//    NSMutableArray *chinaAry = [NSMutableArray array];
+
     [_keyValue removeAllObjects];
     [_valueKey removeAllObjects];
     [_keyAry removeAllObjects];
@@ -315,18 +299,12 @@
         return dict;
     }
     
-    NSMutableArray *tmp = @[].mutableCopy;
-    NSMutableArray *ary = @[].mutableCopy;
-    
     if ([fileManager fileExistsAtPath:tmpFile]) {
         NSString *content = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
-
         NSArray *array = [content componentsSeparatedByString:@"\n"];
-        
         for (int n = 0 ; n < array.count; n++){
             NSString *string = [array[n] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
             if([string hasPrefix:@"//"] || ![string hasSuffix:@";"]){
-                [tmp addObject:string];
                 continue;
             }
             NSArray *keyvalue = [string componentsSeparatedByString:@"="];
@@ -334,9 +312,6 @@
                 NSString *key = [keyvalue[0] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
                 NSString *value = [keyvalue[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
                 [dict setValue:value forKey:key];
-                [ary addObject:string];
-            }else{
-                [tmp addObject:string];
             }
         }
     }
@@ -353,7 +328,7 @@
     [alert beginSheetModalForWindow:self.view.window
                   completionHandler:^(NSModalResponse returnCode){
 
-                  }];
+    }];
 }
 
 #pragma - mark ClickMetods
@@ -394,20 +369,17 @@
 - (IBAction)clickExportButton:(id)sender {
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel setCanChooseDirectories:YES];
-
     NSWindow *window = [[NSApplication sharedApplication] keyWindow];
-
     __weak __typeof(self) weakSelf = self;
-    [openPanel beginSheetModalForWindow:window
-                      completionHandler:^(NSModalResponse returnCode) {
-                        if (returnCode == 1) {
-                            NSURL *fileUrl = [[openPanel URLs] objectAtIndex:0];
-                            NSString *filePath = [[fileUrl.absoluteString componentsSeparatedByString:@"file://"] lastObject];
-                            NSString *decodedString = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (__bridge CFStringRef)filePath, CFSTR(""), CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
-                            NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
-                            [weakSelf.exportField setStringValue:exportPath];
-                        }
-                      }];
+    [openPanel beginSheetModalForWindow:window completionHandler:^(NSModalResponse returnCode) {
+        if (returnCode == 1) {
+            NSURL *fileUrl = [[openPanel URLs] objectAtIndex:0];
+            NSString *filePath = [[fileUrl.absoluteString componentsSeparatedByString:@"file://"] lastObject];
+            NSString *decodedString = (NSString *)CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault, (CFStringRef)filePath, CFSTR("")));
+            NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
+            [weakSelf.exportField setStringValue:exportPath];
+        }
+    }];
 }
 
 - (IBAction)startExport:(id)sender {
