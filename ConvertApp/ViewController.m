@@ -78,7 +78,11 @@
 - (nullable id)tableView:(NSTableView *)tableView objectValueForTableColumn:(nullable NSTableColumn *)tableColumn row:(NSInteger)row {
     if (_keyAry.count > row) {
         NSString *key = _keyAry[row];
-        if ([tableColumn.identifier isEqualToString:@"resultkey"]) {
+       // resultIndex
+        if ([tableColumn.identifier isEqualToString:@"resultIndex"]) {
+            return [NSString stringWithFormat:@"%ld",(long)row + 1];
+        }
+        else if ([tableColumn.identifier isEqualToString:@"resultkey"]) {
             return key;
         } else if ([tableColumn.identifier isEqualToString:@"resultvalue"]) {
             return [_keyValue objectForKey:key];
@@ -111,15 +115,16 @@
     [openPanel setCanChooseDirectories:YES];
 
     NSWindow *window = [[NSApplication sharedApplication] keyWindow];
-
+   
     __weak __typeof(self) weakSelf = self;
     [openPanel beginSheetModalForWindow:window
                       completionHandler:^(NSModalResponse returnCode) {
                         if (returnCode == 1) {
                             NSURL *fileUrl = [[openPanel URLs] objectAtIndex:0];
                             NSString *filePath = [[fileUrl.absoluteString componentsSeparatedByString:@"file://"] lastObject];
-                            NSString *decodedString = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (__bridge CFStringRef)filePath, CFSTR(""), CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
-
+                            //NSString *decodedString = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (__bridge CFStringRef)filePath, CFSTR(""), CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
+                            NSString *decodedString = (NSString *)CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault, (CFStringRef)filePath, CFSTR("")));
+                            
                             weakSelf.projectPath = decodedString;
                             [weakSelf.textField setStringValue:decodedString];
                             NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
@@ -138,8 +143,6 @@
     }
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
-
-    _projectPath = @"/Users/zhongqing/Desktop/XHFire/XHFire/Classes/";
 
     if (_projectPath.length <= 0) {
         [self showAlert:@"请选择项目工程地址"];
@@ -268,9 +271,7 @@
         [self showAlert:@"没有可插入的中文"];
         return;
     }
-    
     NSString *tmpFile = [_exportField stringValue];
-    tmpFile = @"/Users/zhongqing/Desktop/XHFire/XHFire/Resource/zh-Hans.lproj/Localizable.strings";
     __block NSString *willRead = @"";
     if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
         willRead = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
@@ -309,7 +310,6 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
 
     NSString *tmpFile = [_exportField stringValue];
-    tmpFile = @"/Users/zhongqing/Desktop/XHFire/XHFire/Resource/zh-Hans.lproj/Localizable.strings";
     if (!tmpFile) {
         [self showAlert:@"请输入导出路径"];
         return dict;
@@ -414,7 +414,6 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
 
     NSString *tmpFile = [_exportField stringValue];
-    tmpFile = @"/Users/zhongqing/Desktop/XHFire/XHFire/Resource/zh-Hans.lproj/Localizable.strings";
     if (!tmpFile) {
         [self showAlert:@"请输入导出路径"];
         return;
