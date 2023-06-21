@@ -10,7 +10,9 @@
 
 #define LocalizedStringPreffix   @"NSLocalizedString("
 
-@interface ViewController () <NSTableViewDataSource, NSTableViewDelegate>
+@interface ViewController () <NSTableViewDataSource, NSTableViewDelegate>{
+
+}
 
 @property (weak) IBOutlet NSButton *searchBtn;
 @property (weak) IBOutlet NSButton *suffix_m;
@@ -27,6 +29,7 @@
 @property (weak) IBOutlet NSButton *ClearBtn;
 
 @property (nonatomic, copy) NSString *projectPath;
+@property (nonatomic, copy) NSString *exportPath;
 @property (nonatomic, strong) NSMutableSet *suffixSet;          //要遍历的后缀文件名
 @property (nonatomic, strong) NSMutableDictionary *keyValue;    //key - value
 @property (nonatomic, strong) NSMutableArray *keyAry;           //
@@ -46,6 +49,15 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
+    if([[NSUserDefaults standardUserDefaults] objectForKey:@"Project_Path"]){
+        _projectPath = [[NSUserDefaults standardUserDefaults] objectForKey:@"Project_Path"];
+        [self.textField setStringValue:_projectPath];
+    }
+    if([[NSUserDefaults standardUserDefaults] objectForKey:@"Export_Path"]){
+        _exportPath = [[NSUserDefaults standardUserDefaults] objectForKey:@"Export_Path"];
+        [self.exportField setStringValue:_exportPath];
+    }
+    
     _suffixSet = [NSMutableSet set];
 
     _keyValue = [NSMutableDictionary dictionary];
@@ -112,8 +124,8 @@
             NSString *decodedString = (NSString *)CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault, (CFStringRef)filePath, CFSTR("")));
             weakSelf.projectPath = decodedString;
             [weakSelf.textField setStringValue:decodedString];
-            NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
-            [weakSelf.exportField setStringValue:exportPath];
+            
+            [[NSUserDefaults standardUserDefaults] setValue:decodedString forKey:@"Project_Path"];
         }}
     ];
 }
@@ -255,10 +267,9 @@
         [self showAlert:@"没有可插入的中文"];
         return;
     }
-    NSString *tmpFile = [_exportField stringValue];
     __block NSString *willRead = @"";
-    if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
-        willRead = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:_exportPath]) {
+        willRead = [NSString stringWithContentsOfFile:_exportPath encoding:NSUTF8StringEncoding error:nil];
 
         NSDateFormatter *fomart = [[NSDateFormatter alloc] init];
         [fomart setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
@@ -278,7 +289,7 @@
         willRead = [willRead stringByAppendingFormat:@"%@ = %@;\n",key,obj];
     }];
     
-    BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:tmpFile contents:[willRead dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
+    BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:_exportPath contents:[willRead dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
 
     if (isSuccess) {
         [self showAlert:@"Success"];
@@ -378,15 +389,16 @@
             NSString *decodedString = (NSString *)CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault, (CFStringRef)filePath, CFSTR("")));
             NSString *exportPath = [decodedString stringByAppendingPathComponent:@"Localizable.strings"];
             [weakSelf.exportField setStringValue:exportPath];
+            
+            weakSelf.exportPath = exportPath;
+            [[NSUserDefaults standardUserDefaults] setValue:exportPath forKey:@"Export_Path"];
         }
     }];
 }
 
 - (IBAction)startExport:(id)sender {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-
-    NSString *tmpFile = [_exportField stringValue];
-    if (!tmpFile) {
+    if (_exportPath == nil || _exportPath.length < 0) {
         [self showAlert:@"请输入导出路径"];
         return;
     }
