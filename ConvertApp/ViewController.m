@@ -8,6 +8,8 @@
 
 #import "ViewController.h"
 
+#define LocalizedStringPreffix   @"NSLocalizedString("
+
 @interface ViewController () <NSTableViewDataSource, NSTableViewDelegate>
 
 @property (weak) IBOutlet NSButton *searchBtn;
@@ -34,6 +36,9 @@
 @property (nonatomic, strong) NSRegularExpression *regex_Aite;
 @property (weak) IBOutlet NSButton *ClearBtn;
 
+@property (nonatomic, copy) NSArray *keyArrays;
+@property (nonatomic, strong) NSMutableDictionary  *newtextDict;
+
 @end
 
 @implementation ViewController
@@ -46,6 +51,7 @@
     _keyValue = [NSMutableDictionary dictionary];
     _valueKey = [NSMutableDictionary dictionary];
     _oldValueKey = [NSMutableDictionary dictionary];
+    _newtextDict = [NSMutableDictionary dictionary];
 
     _keyAry = [NSMutableArray array];
 
@@ -66,7 +72,7 @@
 
 #pragma - mark NSTableViewDataSource &&NSTableViewDelegate
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-    return _keyAry.count;
+    return _keyValue.count;
 }
 
 - (nullable id)tableView:(NSTableView *)tableView objectValueForTableColumn:(nullable NSTableColumn *)tableColumn row:(NSInteger)row {
@@ -133,6 +139,8 @@
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
 
+    _projectPath = @"/Users/zhongqing/Desktop/XHFire/XHFire/Classes/";
+
     if (_projectPath.length <= 0) {
         [self showAlert:@"请选择项目工程地址"];
         return;
@@ -151,13 +159,13 @@
     //.h .swift
     NSDirectoryEnumerator *enumerator = [fileManager enumeratorAtPath:_projectPath];
     NSString *filePath = nil;
-    NSMutableSet *set = [[NSMutableSet alloc] init];
-    NSMutableArray *chinaAry = [NSMutableArray array];
+//    NSMutableSet *set = [[NSMutableSet alloc] init];
+//    NSMutableArray *chinaAry = [NSMutableArray array];
     [_keyValue removeAllObjects];
     [_valueKey removeAllObjects];
     [_keyAry removeAllObjects];
 
-    NSString *defaultKey = [self localizedKey];
+//    NSString *defaultKey = [self localizedKey];
     while ((filePath = [enumerator nextObject]) != nil) {
         // 要查找的后缀名
         NSString *suffix = [filePath pathExtension];
@@ -179,31 +187,17 @@
             if ([suffix isEqualToString:@".swift"]) {
                 matches = [self.regex matchesInString:content options:NSMatchingReportCompletion range:NSMakeRange(0, content.length)];
             }
-
-            NSString *relplacedString = content;
-
+            if (matches.count <= 0){
+                continue;
+            }
+            
             for (int n = 0; n < matches.count; n++) {
                 NSTextCheckingResult *obj = matches[n];
 
                 NSString *china = [content substringWithRange:obj.range];
 
-                NSRange range = [relplacedString rangeOfString:china];
-
-                if (range.location != NSNotFound) {
-                    if (![set containsObject:china]) {
-                        [set addObject:china];
-                        [chinaAry addObject:china];
-                    } else {
-                        continue;
-                    }
-                    NSUInteger nIndex = [chinaAry indexOfObject:china];
-
-                    NSString *key = [NSString stringWithFormat:@"%@%lu", defaultKey, (unsigned long)nIndex];
-
-                    [_keyValue setValue:china forKey:key];
-                    [_keyAry addObject:key];
-                    [_valueKey setValue:key forKey:china];
-                }
+                [_keyValue setValue:china forKey:china];
+                
             }
         }
     }
@@ -213,6 +207,8 @@
         [self.resultTable reloadData];
         return;
     }
+    _keyAry = [_keyValue.allKeys mutableCopy];
+
     [self.resultTable reloadData];
     self.exportDir.enabled = NO;
     self.ClearBtn.enabled = YES;
@@ -259,7 +255,7 @@
 }
 
 - (NSString *)localizedKey {
-    NSString *defaultKey = @"LocalizedKey";
+    NSString *defaultKey = @"XHLocalizedKey";
     if (self.localizedkeyField.stringValue.length > 0) {
         defaultKey = self.localizedkeyField.stringValue;
     }
@@ -268,9 +264,14 @@
 
 #pragma - mark privateMethods
 - (void)startReadTofile {
+    if(_newtextDict.count <= 0){
+        [self showAlert:@"没有可插入的中文"];
+        return;
+    }
+    
     NSString *tmpFile = [_exportField stringValue];
-
-    NSString *willRead = @"";
+    tmpFile = @"/Users/zhongqing/Desktop/XHFire/XHFire/Resource/zh-Hans.lproj/Localizable.strings";
+    __block NSString *willRead = @"";
     if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
         willRead = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
 
@@ -282,21 +283,16 @@
         willRead = [willRead stringByAppendingString:flagString];
     }
 
-    NSString *defaultKey = [self localizedKey];
-    for (int n = 0; n < _keyValue.count; n++) {
-        NSString *key = [defaultKey stringByAppendingFormat:@"%d", n];
-        NSString *value = [_keyValue objectForKey:key];
-
-        if ([value hasPrefix:@"@"]) {
-            value = [value substringFromIndex:1];
+    [_newtextDict enumerateKeysAndObjectsUsingBlock:^(NSString * key, NSString* obj, BOOL * _Nonnull stop) {
+        if([key hasPrefix:@"@"]){
+            key = [key substringFromIndex:1];
         }
-        if (_oldValueKey.count > 0) {
-            if ([_oldValueKey objectForKey:value]) {
-                continue;
-            }
+        if([obj hasPrefix:@"@"]){
+            obj = [obj substringFromIndex:1];
         }
-        willRead = [willRead stringByAppendingFormat:@"\"%@\"   =  %@;\n", key, value];
-    }
+        willRead = [willRead stringByAppendingFormat:@"%@ = %@;\n",key,obj];
+    }];
+    
     BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:tmpFile contents:[willRead dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
 
     if (isSuccess) {
@@ -306,47 +302,45 @@
     }
 }
 
-- (void)readExistLocalizedString {
-    [_oldValueKey removeAllObjects];
+- (NSMutableDictionary *)readExistLocalizedString {
+    //[_oldValueKey removeAllObjects];
 
+    NSMutableDictionary *dict = @{}.mutableCopy;
     NSFileManager *fileManager = [NSFileManager defaultManager];
 
     NSString *tmpFile = [_exportField stringValue];
+    tmpFile = @"/Users/zhongqing/Desktop/XHFire/XHFire/Resource/zh-Hans.lproj/Localizable.strings";
     if (!tmpFile) {
         [self showAlert:@"请输入导出路径"];
-        return;
+        return dict;
     }
-
+    
+    NSMutableArray *tmp = @[].mutableCopy;
+    NSMutableArray *ary = @[].mutableCopy;
+    
     if ([fileManager fileExistsAtPath:tmpFile]) {
         NSString *content = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
 
-        NSString *pattern = @"\"\\w+\"\\s+=\\s+.+\n";
-        NSError *error = nil;
-        NSRegularExpression *exp = [[NSRegularExpression alloc] initWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:&error];
-        if (error) {
-            NSLog(@"Could't create regex with given string and options");
-        }
-        NSArray *matches = [exp matchesInString:content options:NSMatchingReportCompletion range:NSMakeRange(0, content.length)];
-        for (NSTextCheckingResult *result in matches) {
-            NSString *lineStr = [content substringWithRange:result.range];
-            if ([lineStr containsString:@"//"]) {
+        NSArray *array = [content componentsSeparatedByString:@"\n"];
+        
+        for (int n = 0 ; n < array.count; n++){
+            NSString *string = [array[n] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            if([string hasPrefix:@"//"] || ![string hasSuffix:@";"]){
+                [tmp addObject:string];
                 continue;
             }
-            NSRange range = [lineStr rangeOfString:@"="];
-            if (range.location != NSNotFound) {
-                NSString *key = [[lineStr substringToIndex:range.location] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-                key = [key stringByReplacingOccurrencesOfString:@"\"" withString:@""];
-
-                NSString *value = [[lineStr substringFromIndex:range.location + range.length] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-                if (![value hasSuffix:@";"]) {
-                    continue;
-                }
-                value = [value substringWithRange:NSMakeRange(0, value.length - 1)];
-
-                [_oldValueKey setValue:key forKey:value];
+            NSArray *keyvalue = [string componentsSeparatedByString:@"="];
+            if(keyvalue.count == 2){
+                NSString *key = [keyvalue[0] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                NSString *value = [keyvalue[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                [dict setValue:value forKey:key];
+                [ary addObject:string];
+            }else{
+                [tmp addObject:string];
             }
         }
     }
+    return dict;
 }
 
 - (void)showAlert:(NSString *)text {
@@ -420,6 +414,7 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
 
     NSString *tmpFile = [_exportField stringValue];
+    tmpFile = @"/Users/zhongqing/Desktop/XHFire/XHFire/Resource/zh-Hans.lproj/Localizable.strings";
     if (!tmpFile) {
         [self showAlert:@"请输入导出路径"];
         return;
@@ -435,8 +430,30 @@
         return;
     }
 
-    //通过路径找出已经本地话过的文件内容
-    [self readExistLocalizedString];
+    ///通过路径找出已经本地话过的文件内容
+    _oldValueKey = [self readExistLocalizedString];
+    ///通过跟本地Localizable.strings文件比较。找出新插入的中文；
+    if (_oldValueKey.count > 0){
+        [_keyValue enumerateKeysAndObjectsUsingBlock:^(NSString * key, NSString * value, BOOL * _Nonnull stop) {
+            if([value hasPrefix:@"@"]){
+                value = [value substringFromIndex:1];
+            }
+            if(![_oldValueKey objectForKey:value]){
+                [_newtextDict setValue:value forKey:key];
+            }
+        }];
+    }else{
+        [_newtextDict addEntriesFromDictionary:_keyValue];
+    }
+    ///合并所有的列表
+    [_keyValue addEntriesFromDictionary:_oldValueKey];
+
+    ///
+    [_valueKey removeAllObjects];
+    [_keyValue enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+        NSLog(@"%@ == %@ \n",key,obj);
+        [_valueKey setValue:key forKey:obj];
+    }];
 
     NSDirectoryEnumerator *enumerator = [fileManager enumeratorAtPath:_projectPath];
     NSString *filePath = nil;
@@ -455,45 +472,72 @@
             if ([suffix isEqualToString:@".swift"]) {
                 matches = [self.regex matchesInString:content options:NSMatchingReportCompletion range:NSMakeRange(0, content.length)];
             }
+            if(matches.count <= 0){
+                continue;
+            }
             NSString *relplacedString = content;
 
+            NSInteger index = 0;
+            BOOL isReplace = NO;  //是否要替换
             for (int n = 0; n < matches.count; n++) {
                 NSTextCheckingResult *obj = matches[n];
-
+                ///从原始文本找到
                 NSString *china = [content substringWithRange:obj.range];
+            
+                NSString *tmp = [relplacedString substringFromIndex:index];
+                
+                NSRange range = [tmp rangeOfString:china];
+                
+                range = NSMakeRange(range.location + index, range.length);
+             
+                //NSRange range = [relplacedString rangeOfString:china];
+            
 
-                NSRange range = [relplacedString rangeOfString:china];
+                if(range.location > LocalizedStringPreffix.length){
+                    NSRange tmpRange = NSMakeRange(range.location - LocalizedStringPreffix.length, LocalizedStringPreffix.length);
+
+                    NSString *tmpStr = [relplacedString substringWithRange:tmpRange];
+
+                    if([tmpStr isEqualToString:LocalizedStringPreffix]){
+                        if (n == matches.count - 1 && isReplace) {
+                            [self beginReplaceString:relplacedString path:filePath];
+                        }
+                        index = range.location + range.length;
+                        continue;
+                    }
+                }
 
                 NSString *value = china;
                 //找出对应的key
                 NSString *key = [_valueKey objectForKey:value];
-                //如果就的配置文件有值，改用旧的
-                if (_oldValueKey.count > 0) {
-                    if ([value hasPrefix:@"@"]) {
-                        value = [value substringFromIndex:1];
-                    }
-                    if ([_oldValueKey objectForKey:value]) {
-                        key = [_oldValueKey objectForKey:value];
-                    }
-                }
+
                 if (key) {
-                    NSString *loclizedStr = [NSString stringWithFormat:@"NSLocalizedString(@\"%@\", @\"\")", key];
+                    isReplace = YES;
+                    NSString *loclizedStr = [LocalizedStringPreffix stringByAppendingFormat:@"%@,@\"\")",key];
                     if ([suffix containsString:@".swift"]) {
-                        loclizedStr = [NSString stringWithFormat:@"NSLocalizedString(\"%@\", \"\")", key];
+                        loclizedStr = [LocalizedStringPreffix stringByAppendingFormat:@"%@,@\"\")",key];
                     }
                     relplacedString = [relplacedString stringByReplacingOccurrencesOfString:china withString:loclizedStr options:NSLiteralSearch range:range];
-
-                    if (n == matches.count - 1) {
-                        NSError *error;
-                        if (![relplacedString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
-                        }
-                    }
+                    
+                    index = range.location + loclizedStr.length;
+                }
+                
+                if (n == matches.count - 1 && isReplace) {
+                    [self beginReplaceString:relplacedString path:filePath];
                 }
             }
         }
     }
     [self startReadTofile];
 }
+
+- (void)beginReplaceString:(NSString *)relplacedString path:(NSString *)filePath{
+    NSError *error;
+    if (![relplacedString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+        NSLog(@"write error :%@",filePath);
+    }
+}
+
 - (IBAction)clickClearBtn:(id)sender {
     self.localizedkeyField.enabled = YES;
     self.exportDir.enabled = YES;
