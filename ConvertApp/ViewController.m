@@ -10,6 +10,8 @@
 
 #define LocalizedStringPreffix   @"NSLocalizedString("
 
+#define NSLogPreffix   @"NSLog("
+
 @interface ViewController () <NSTableViewDataSource, NSTableViewDelegate>{
 
 }
@@ -474,14 +476,25 @@
                 range = NSMakeRange(range.location + index, range.length);
              
                 //NSRange range = [relplacedString rangeOfString:china];
-            
-
                 if(range.location > LocalizedStringPreffix.length){
                     NSRange tmpRange = NSMakeRange(range.location - LocalizedStringPreffix.length, LocalizedStringPreffix.length);
 
                     NSString *tmpStr = [relplacedString substringWithRange:tmpRange];
 
                     if([tmpStr isEqualToString:LocalizedStringPreffix]){
+                        if (n == matches.count - 1 && isReplace) {
+                            [self beginReplaceString:relplacedString path:filePath];
+                        }
+                        index = range.location + range.length;
+                        continue;
+                    }
+                }
+                
+                //NSLog不做翻译
+                if(range.length > NSLogPreffix.length){
+                    NSRange tmpRange = NSMakeRange(range.location - NSLogPreffix.length, NSLogPreffix.length);
+                    NSString *tmpStr = [relplacedString substringWithRange:tmpRange];
+                    if([tmpStr isEqualToString:NSLogPreffix]){
                         if (n == matches.count - 1 && isReplace) {
                             [self beginReplaceString:relplacedString path:filePath];
                         }
