@@ -9,7 +9,7 @@
 #import "ViewController.h"
 
 #define LocalizedStringPreffix   @"NSLocalizedString("
-
+// NSLocalizedString("", comment: "")
 #define NSLogPreffix   @"NSLog("
 
 @interface ViewController () <NSTableViewDataSource, NSTableViewDelegate>{
@@ -128,6 +128,9 @@
             [weakSelf.textField setStringValue:decodedString];
             
             [[NSUserDefaults standardUserDefaults] setValue:decodedString forKey:@"Project_Path"];
+            ///重置
+            weakSelf.exportPath = @"";
+            [weakSelf.exportField setStringValue:@""];
         }}
     ];
 }
@@ -194,11 +197,20 @@
             
             for (int n = 0; n < matches.count; n++) {
                 NSTextCheckingResult *obj = matches[n];
-
+                ///从原始文本找到
                 NSString *china = [content substringWithRange:obj.range];
-
-                [_keyValue setValue:china forKey:china];
                 
+                NSRange range = obj.range;
+                
+                //NSLog不做翻译
+                if(range.length > NSLogPreffix.length){
+                    NSRange tmpRange = NSMakeRange(range.location - NSLogPreffix.length, NSLogPreffix.length);
+                    NSString *tmpStr = [content substringWithRange:tmpRange];
+                    if([tmpStr isEqualToString:NSLogPreffix]){
+                        continue;
+                    }
+                }
+                [_keyValue setValue:china forKey:china];
             }
         }
     }
@@ -323,7 +335,10 @@
             NSArray *keyvalue = [string componentsSeparatedByString:@"="];
             if(keyvalue.count == 2){
                 NSString *key = [keyvalue[0] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-                NSString *value = [keyvalue[1] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                
+                NSString *value =  [keyvalue[1] stringByReplacingOccurrencesOfString:@";" withString:@""];
+                value = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                
                 [dict setValue:value forKey:key];
             }
         }
@@ -511,7 +526,7 @@
                     isReplace = YES;
                     NSString *loclizedStr = [LocalizedStringPreffix stringByAppendingFormat:@"%@,@\"\")",key];
                     if ([suffix containsString:@".swift"]) {
-                        loclizedStr = [LocalizedStringPreffix stringByAppendingFormat:@"%@,@\"\")",key];
+                        loclizedStr = [LocalizedStringPreffix stringByAppendingFormat:@"%@,comment: \"\")",key];
                     }
                     relplacedString = [relplacedString stringByReplacingOccurrencesOfString:china withString:loclizedStr options:NSLiteralSearch range:range];
                     
