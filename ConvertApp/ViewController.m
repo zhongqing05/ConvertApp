@@ -131,6 +131,7 @@
             ///重置
             weakSelf.exportPath = @"";
             [weakSelf.exportField setStringValue:@""];
+            [[NSUserDefaults standardUserDefaults] setValue:@"" forKey:@"Export_Path"];
         }}
     ];
 }
@@ -318,6 +319,7 @@
 
     if (isSuccess) {
         [self showAlert:@"Success"];
+        [_newtextDict removeAllObjects];
     } else {
         [self showAlert:@"导出文件失败"];
     }
