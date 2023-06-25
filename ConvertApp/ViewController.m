@@ -210,6 +210,17 @@
                         continue;
                     }
                 }
+                
+                NSString *tmp = [content substringToIndex:range.location + range.length];
+                NSArray *array = [tmp componentsSeparatedByString:@"\n"];
+                if(array.count > 0){
+                    NSString *last = [[array lastObject] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                    if([last hasPrefix:@"//"]){
+                        NSLog(@"lastObject:%@",last);
+                        continue;
+                    }
+                }
+                
                 [_keyValue setValue:china forKey:china];
             }
         }
@@ -513,6 +524,17 @@
                         if (n == matches.count - 1 && isReplace) {
                             [self beginReplaceString:relplacedString path:filePath];
                         }
+                        index = range.location + range.length;
+                        continue;
+                    }
+                }
+                
+                // '//'注释不做翻译
+                NSString *preString = [content substringToIndex:obj.range.location + obj.range.length];
+                NSArray *array = [preString componentsSeparatedByString:@"\n"];
+                if(array.count > 0){
+                    NSString *last = [[array lastObject] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+                    if([last hasPrefix:@"//"]){
                         index = range.location + range.length;
                         continue;
                     }
