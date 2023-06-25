@@ -34,9 +34,10 @@
 @property (nonatomic, copy) NSString *exportPath;
 @property (nonatomic, strong) NSMutableSet *suffixSet;          //要遍历的后缀文件名
 @property (nonatomic, strong) NSMutableDictionary *keyValue;    //key - value
+
 @property (nonatomic, strong) NSMutableArray *keyAry;           //
 @property (nonatomic, strong) NSMutableDictionary *valueKey;    //value -  key(英文value 和key 都保持唯一)
-@property (nonatomic, strong) NSMutableDictionary *oldValueKey; //value -key
+
 @property (nonatomic, copy) NSArray *ignoreFolder;
 @property (nonatomic, strong) NSRegularExpression *regex;
 @property (nonatomic, strong) NSRegularExpression *regex_Aite;
@@ -64,7 +65,6 @@
 
     _keyValue = [NSMutableDictionary dictionary];
     _valueKey = [NSMutableDictionary dictionary];
-    _oldValueKey = [NSMutableDictionary dictionary];
     _newtextDict = [NSMutableDictionary dictionary];
 
     _keyAry = [NSMutableArray array];
@@ -326,7 +326,6 @@
 }
 
 - (NSMutableDictionary *)readExistLocalizedString {
-    //[_oldValueKey removeAllObjects];
 
     NSMutableDictionary *dict = @{}.mutableCopy;
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -352,7 +351,8 @@
                 NSString *value =  [keyvalue[1] stringByReplacingOccurrencesOfString:@";" withString:@""];
                 value = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
                 
-                [dict setValue:value forKey:key];
+                //[dict setValue:value forKey:key];
+                [dict setValue:key forKey:value];
             }
         }
     }
@@ -444,22 +444,20 @@
     }
 
     ///通过路径找出已经本地话过的文件内容
-    _oldValueKey = [self readExistLocalizedString];
+    NSMutableDictionary* localValueKey = [self readExistLocalizedString];
     ///通过跟本地Localizable.strings文件比较。找出新插入的中文；
-    if (_oldValueKey.count > 0){
+    if (localValueKey.count > 0){
         [_keyValue enumerateKeysAndObjectsUsingBlock:^(NSString * key, NSString * value, BOOL * _Nonnull stop) {
             if([value hasPrefix:@"@"]){
                 value = [value substringFromIndex:1];
             }
-            if(![_oldValueKey objectForKey:value]){
+            if(![localValueKey objectForKey:value]){
                 [_newtextDict setValue:value forKey:key];
             }
         }];
     }else{
         [_newtextDict addEntriesFromDictionary:_keyValue];
     }
-    ///合并所有的列表
-    [_keyValue addEntriesFromDictionary:_oldValueKey];
 
     ///
     [_valueKey removeAllObjects];
@@ -467,6 +465,7 @@
         NSLog(@"%@ == %@ \n",key,obj);
         [_valueKey setValue:key forKey:obj];
     }];
+    [_valueKey addEntriesFromDictionary:localValueKey];
 
     NSDirectoryEnumerator *enumerator = [fileManager enumeratorAtPath:_projectPath];
     NSString *filePath = nil;
