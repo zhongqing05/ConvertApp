@@ -33,17 +33,17 @@
 @property (nonatomic, copy) NSString *projectPath;
 @property (nonatomic, copy) NSString *exportPath;
 @property (nonatomic, strong) NSMutableSet *suffixSet;          //要遍历的后缀文件名
+/// key是中文。value是配置文件的key
 @property (nonatomic, strong) NSMutableDictionary *keyValue;    //key - value
-
-@property (nonatomic, strong) NSMutableArray *keyAry;           //
-@property (nonatomic, strong) NSMutableDictionary *valueKey;    //value -  key(英文value 和key 都保持唯一)
+///所有中文
+@property (nonatomic, strong) NSMutableArray *chinaAry;           //
+///新加入的中文
+@property (nonatomic, strong) NSMutableArray *newtextAry;
 
 @property (nonatomic, copy) NSArray *ignoreFolder;
 @property (nonatomic, strong) NSRegularExpression *regex;
 @property (nonatomic, strong) NSRegularExpression *regex_Aite;
 
-///新加入的中文
-@property (nonatomic, strong) NSMutableDictionary  *newtextDict;
 
 @end
 
@@ -62,12 +62,8 @@
     }
     
     _suffixSet = [NSMutableSet set];
-
     _keyValue = [NSMutableDictionary dictionary];
-    _valueKey = [NSMutableDictionary dictionary];
-    _newtextDict = [NSMutableDictionary dictionary];
-
-    _keyAry = [NSMutableArray array];
+    _chinaAry = [NSMutableArray array];
 
     if (_suffix_m.state == NSControlStateValueOn) {
         [_suffixSet addObject:@".m"];
@@ -86,20 +82,20 @@
 
 #pragma - mark NSTableViewDataSource &&NSTableViewDelegate
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-    return _keyValue.count;
+    return _chinaAry.count;
 }
 
 - (nullable id)tableView:(NSTableView *)tableView objectValueForTableColumn:(nullable NSTableColumn *)tableColumn row:(NSInteger)row {
-    if (_keyAry.count > row) {
-        NSString *key = _keyAry[row];
+    if (_chinaAry.count > row) {
+        NSString *key = _chinaAry[row];
        // resultIndex
         if ([tableColumn.identifier isEqualToString:@"resultIndex"]) {
             return [NSString stringWithFormat:@"%ld",(long)row + 1];
         }
         else if ([tableColumn.identifier isEqualToString:@"resultkey"]) {
-            return key;
-        } else if ([tableColumn.identifier isEqualToString:@"resultvalue"]) {
             return [_keyValue objectForKey:key];
+        } else if ([tableColumn.identifier isEqualToString:@"resultvalue"]) {
+            return key;
         }
     }
     return @"";
@@ -167,8 +163,7 @@
     NSString *filePath = nil;
 
     [_keyValue removeAllObjects];
-    [_valueKey removeAllObjects];
-    [_keyAry removeAllObjects];
+    [_chinaAry removeAllObjects];
 
 //    NSString *defaultKey = [self localizedKey];
     while ((filePath = [enumerator nextObject]) != nil) {
@@ -221,8 +216,11 @@
                         continue;
                     }
                 }
-                
-                [_keyValue setValue:china forKey:china];
+               ///
+                if(![_keyValue objectForKey:china]){
+                    [_keyValue setValue:china forKey:china];
+                    [_chinaAry addObject:china];
+                }
             }
         }
     }
@@ -232,7 +230,6 @@
         [self.resultTable reloadData];
         return;
     }
-    _keyAry = [_keyValue.allKeys mutableCopy];
 
     [self.resultTable reloadData];
     self.exportDir.enabled = NO;
@@ -289,7 +286,7 @@
 
 #pragma - mark privateMethods
 - (void)startReadTofile {
-    if(_newtextDict.count <= 0){
+    if(_newtextAry.count <= 0){
         [self showAlert:@"没有可插入的中文"];
         return;
     }
@@ -305,21 +302,24 @@
         willRead = [willRead stringByAppendingString:flagString];
     }
 
-    [_newtextDict enumerateKeysAndObjectsUsingBlock:^(NSString * key, NSString* obj, BOOL * _Nonnull stop) {
+    for (int n= 0; n < _newtextAry.count; n++){
+        NSString *text = _newtextAry[n];
+        NSString *key = [_keyValue objectForKey:text];
+
         if([key hasPrefix:@"@"]){
             key = [key substringFromIndex:1];
         }
-        if([obj hasPrefix:@"@"]){
-            obj = [obj substringFromIndex:1];
+        if([text hasPrefix:@"@"]){
+            text = [text substringFromIndex:1];
         }
-        willRead = [willRead stringByAppendingFormat:@"%@ = %@;\n",key,obj];
-    }];
+        willRead = [willRead stringByAppendingFormat:@"%@ = %@;\n",key,text];
+    }
     
     BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:_exportPath contents:[willRead dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
 
     if (isSuccess) {
         [self showAlert:@"Success"];
-        [_newtextDict removeAllObjects];
+        [_newtextAry removeAllObjects];
     } else {
         [self showAlert:@"导出文件失败"];
     }
@@ -446,26 +446,19 @@
     ///通过路径找出已经本地话过的文件内容
     NSMutableDictionary* localValueKey = [self readExistLocalizedString];
     ///通过跟本地Localizable.strings文件比较。找出新插入的中文；
-    if (localValueKey.count > 0){
-        [_keyValue enumerateKeysAndObjectsUsingBlock:^(NSString * key, NSString * value, BOOL * _Nonnull stop) {
-            if([value hasPrefix:@"@"]){
-                value = [value substringFromIndex:1];
-            }
-            if(![localValueKey objectForKey:value]){
-                [_newtextDict setValue:value forKey:key];
-            }
-        }];
-    }else{
-        [_newtextDict addEntriesFromDictionary:_keyValue];
+//    if (localValueKey.count > 0){
+//
+    _newtextAry = @[].mutableCopy;
+    for(int n = 0; n < _chinaAry.count; n++){
+        NSString * value = _chinaAry[n];
+        if([value hasPrefix:@"@"]){
+            value = [value substringFromIndex:1];
+        }
+        if(![localValueKey objectForKey:value]){
+            [_newtextAry addObject:_chinaAry[n]];
+        }
     }
-
-    ///
-    [_valueKey removeAllObjects];
-    [_keyValue enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-        NSLog(@"%@ == %@ \n",key,obj);
-        [_valueKey setValue:key forKey:obj];
-    }];
-    [_valueKey addEntriesFromDictionary:localValueKey];
+    [_keyValue addEntriesFromDictionary:localValueKey];
 
     NSDirectoryEnumerator *enumerator = [fileManager enumeratorAtPath:_projectPath];
     NSString *filePath = nil;
@@ -543,7 +536,7 @@
 
                 NSString *value = china;
                 //找出对应的key
-                NSString *key = [_valueKey objectForKey:value];
+                NSString *key = [_keyValue objectForKey:value];
 
                 if (key) {
                     isReplace = YES;
@@ -576,9 +569,9 @@
     self.localizedkeyField.enabled = YES;
     self.exportDir.enabled = YES;
     
-    [self.keyAry removeAllObjects];
+    [self.chinaAry removeAllObjects];
     [self.keyValue removeAllObjects];
-    [self.valueKey removeAllObjects];
+
     [self.resultTable reloadData];
 }
 
