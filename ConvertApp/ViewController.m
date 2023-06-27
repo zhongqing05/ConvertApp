@@ -286,6 +286,8 @@
 
 #pragma - mark privateMethods
 - (void)startReadTofile {
+    //[self exportChinaText];
+    //[self transforToTWLanguage];
     if(_newtextAry.count <= 0){
         [self showAlert:@"没有可插入的中文"];
         return;
@@ -584,5 +586,79 @@
 {
     NSLog(@"textDidChange");
 }
+
+//
+//- (void)exportChinaText{
+//
+//    NSString *tmpFile = @"/Users/zhongqing/Desktop/china.txt";
+//
+//    NSString *content = @"";
+//    for (int n = 0 ; n < _chinaAry.count; n++){
+//        NSString *text = _chinaAry[n];
+//        if([text hasPrefix:@"@"]){
+//            text = [text substringFromIndex:1];
+//        }
+//        content = [content stringByAppendingFormat:@"%@\n",text];
+//    }
+//
+//    BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:tmpFile contents:[content dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
+//
+//    if (isSuccess) {
+//        [self showAlert:@"Success"];
+//    } else {
+//        [self showAlert:@"导出文件失败"];
+//    }
+//}
+//
+//- (void)transforToTWLanguage{
+//
+//    NSString *tmpFile = @"/Users/zhongqing/Desktop/china.txt";
+//
+//
+//    NSMutableArray *list = @[].mutableCopy;
+//    if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
+//        NSString *content = [NSString stringWithContentsOfFile:tmpFile encoding:NSUTF8StringEncoding error:nil];
+//        NSArray *array = [content componentsSeparatedByString:@"\n"];
+//
+//        for (int n = 0 ; n < array.count; n++){
+//            NSString *string = [array[n] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+//            if([string hasPrefix:@"//"]){
+//                continue;
+//            }
+//            [list addObject:array[n]];
+//        }
+//    }
+//    if(list.count != _chinaAry.count){
+//        return;
+//    }
+//
+//    NSString *content = @"";
+//
+//    for (int n = 0 ; n < _chinaAry.count; n++){
+//
+//        NSString *text = list[n];
+//       // NSString *key = [_keyValue objectForKey:text];
+//        NSString *key = _chinaAry[n];
+//        if([key hasPrefix:@"@"]){
+//            key = [key substringFromIndex:1];
+//        }
+//        if([text hasPrefix:@"@"]){
+//            text = [text substringFromIndex:1];
+//        }
+//        content = [content stringByAppendingFormat:@"%@ = %@;\n",key,text];
+//    }
+//
+//    NSLog(@"%@",content);
+//
+//    NSString *path = @"/Users/zhongqing/Desktop/tw.txt";
+//
+//    BOOL isSuccess = [[NSFileManager defaultManager] createFileAtPath:path contents:[content dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
+//
+//    if (isSuccess) {
+//        [self showAlert:@"Success"];
+//    } else {
+//        [self showAlert:@"导出文件失败"];
+//    }
+//}
 
 @end
